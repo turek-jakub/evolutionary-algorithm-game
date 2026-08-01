@@ -1,0 +1,405 @@
+import { Network } from "./network.js";
+
+class Viewport {
+  #canvas = document.getElementById("canvas");
+  #audioDeath = new Audio("assets/Sound Efects/die.ogg");
+  #audioHit = new Audio("assets/Sound Efects/hit.ogg");
+  #audioPoint = new Audio("assets/Sound Efects/point.ogg");
+  #audioWing = new Audio("assets/Sound Efects/wing.ogg");
+  #audioSwoosh = new Audio("assets/Sound Efects/swoosh.ogg");
+  #ctx = canvas.getContext("2d");
+
+  /** @param {Sprite[]} spritesArr */
+  draw(drawableArr) {
+    this.#ctx.clearRect(0, 0, this.#canvas.width, this.#canvas.height);
+
+    for (const drawable of drawableArr) {
+      drawable.draw(this.#ctx);
+    }
+  }
+}
+
+class Timer {
+  #initial;
+  #current;
+  #callback;
+  constructor(initial, callback) {
+    this.#initial = initial;
+    this.#current = initial;
+    this.#callback = callback;
+  }
+
+  update() {
+    if (--this.#current <= 0) {
+      this.#callback();
+      this.#current = this.#initial;
+    }
+  }
+}
+
+class Game {
+  #gameSpeed = 1;
+  /** @type {Set<Pipes>} */
+  #pipes = new Set();
+  #previousUpdateTime = 0;
+  #viewport = new Viewport();
+  #numOfPipes = 0;
+  #decisionTimer = new Timer(10, () => this.decide());
+  /** @type {Set<BirdObject>} */
+  #birds;
+  #background = new SpriteObject(
+    new Sprite("assets/Flappy Bird/background-day.png"),
+  );
+  #ground1 = new SpriteObject(new Sprite("assets/Flappy Bird/base.png"), {
+    x: 0,
+    y: 480,
+  });
+  #ground2 = new SpriteObject(new Sprite("assets/Flappy Bird/base.png"), {
+    x: 288,
+    y: 480,
+  });
+  #objects;
+
+  /**@param {Set<BirdObject>} birds */
+  constructor(birds) {
+    this.#birds = birds;
+    this.setup();
+  }
+
+  setup() {
+    this.addPipes(300, this.#numOfPipes++);
+    this.addPipes(500, this.#numOfPipes++);
+    window.requestAnimationFrame((time) => this.update(time));
+  }
+
+  update(time) {
+    const delta = Math.min((time - this.#previousUpdateTime) / 1000, 0.1);
+    this.#objects = [this.#background];
+
+    for (const bird of this.#birds) {
+      for (const pipe of this.#pipes) {
+        if (this.isCollision(bird, pipe)) {
+          bird.kill();
+        } else if (bird.getPosition() > pipe.getPositionX()) {
+          const pipeId = pipe.getId();
+          if (pipeId > bird.getScore()) bird.setScore(pipeId);
+        }
+      }
+    }
+
+    for (const pipe of this.#pipes) {
+      pipe.setPositionX(pipe.getPositionX() - 100 * delta * this.#gameSpeed);
+
+      if (pipe.getPositionX() < -52) {
+        this.addPipes(350 - 60 * Math.random(), this.#numOfPipes++);
+        this.#pipes.delete(pipe);
+      } else this.#objects.push(pipe);
+    }
+
+    for (const bird of this.#birds) {
+      const position = bird.getPosition();
+
+      if (position.y <= 458) {
+        bird.setVelocity(bird.getVelocity() + 800 * delta * this.#gameSpeed);
+        bird.setPositionY(
+          position.y + bird.getVelocity() * delta * this.#gameSpeed,
+        );
+      } else {
+        bird.setPositionX(bird.getPosition().x - 100 * delta * this.#gameSpeed);
+      }
+      if (position.x > -32) this.#objects.push(bird);
+    }
+    this.#decisionTimer.update();
+
+    this.#ground1.setPositionX(
+      this.#ground1.getPosition().x - 100 * delta * this.#gameSpeed,
+    );
+    this.#ground2.setPositionX(
+      this.#ground2.getPosition().x - 100 * delta * this.#gameSpeed,
+    );
+
+    if (this.#ground1.getPosition().x < -336)
+      this.#ground1.setPositionX(this.#ground2.getPosition().x + 336);
+
+    if (this.#ground2.getPosition().x < -336)
+      this.#ground2.setPositionX(this.#ground1.getPosition().x + 336);
+
+    this.#previousUpdateTime = time;
+    window.requestAnimationFrame((time) => this.update(time));
+    this.#objects.push(this.#ground1, this.#ground2);
+    this.#viewport.draw(this.#objects);
+  }
+
+  addPipes(distance, id) {
+    this.#pipes.add(new Pipes(distance, id));
+  }
+
+  /**
+   * @param {BirdObject} bird
+   * @param {Pipes} pipe */
+  isCollision(bird, pipe) {
+    if (
+      pipe.getPositionX() + pipe.getWidth() > bird.getPosition().x &&
+      pipe.getPositionX() < bird.getPosition().x + 34 &&
+      (bird.getPosition().y < pipe.getSeparationTop() ||
+        bird.getPosition().y + 24 >
+          pipe.getSeparationTop() + pipe.pipeSeparation) &&
+      bird.isAlive()
+    ) {
+      return true;
+    }
+    return false;
+  }
+
+  decide() {
+    for (const bird of this.#birds) {
+      const info = [];
+      info.push(Math.min(bird.getVelocity() / 1000, 1));
+      info.push(Math.min(bird.getPosition().y / 512, 1));
+      const [...pipes] = this.#pipes;
+      pipes.sort((a, b) => a.getPositionX() < b.getPositionX());
+      const [closer, further] = pipes;
+
+      info.push(Math.min(closer.getPositionX() / 500, 1));
+      info.push(Math.min(closer.getSeparationTop() / 512, 1));
+
+      info.push(Math.min(further.getPositionX() / 500, 1));
+      info.push(Math.min(further.getSeparationTop() / 512, 1));
+
+      info.push(1);
+      if (bird.isAlive() && bird.decide(info)) bird.setVelocity(-300);
+    }
+  }
+
+  /** @param {Creature[]} creatures */
+  play(creatures) {}
+}
+
+class Pipes {
+  pipeSeparation = 120;
+
+  #separationTop = Math.floor(Math.random() * 212) + 100;
+  #height = 320;
+  #width = 52;
+  #topPipe;
+  #bottomPipe;
+  #positionX;
+  #id;
+
+  /**@param {Number} positionX */
+  constructor(positionX, id) {
+    this.#topPipe = new SpriteObject(
+      new Sprite("assets/Flappy Bird/pipe-green.png"),
+      { x: positionX, y: this.#separationTop + this.pipeSeparation },
+    );
+    this.#bottomPipe = new SpriteObject(
+      new Sprite("assets/Flappy Bird/pipe-green-down.png"),
+      { x: positionX, y: this.#separationTop - this.#height },
+    );
+    this.#positionX = positionX;
+    this.#id = id;
+  }
+
+  draw(ctx) {
+    this.#topPipe.draw(ctx);
+    this.#bottomPipe.draw(ctx);
+  }
+
+  setPositionX(positionX) {
+    this.#positionX = positionX;
+    this.#topPipe.setPositionX(positionX);
+    this.#bottomPipe.setPositionX(positionX);
+  }
+
+  getPositionX() {
+    return this.#positionX;
+  }
+
+  getWidth() {
+    return this.#width;
+  }
+
+  getHeight() {
+    return this.#height;
+  }
+
+  getId() {
+    return this.#id;
+  }
+
+  getSeparationTop() {
+    return this.#separationTop;
+  }
+}
+
+class Sprite {
+  #image;
+  #rotation;
+  constructor(src, rotation = 0) {
+    this.#image = new Image();
+    this.#image.src = src;
+    this.#rotation = rotation;
+  }
+
+  getImage() {
+    return this.#image;
+  }
+
+  getRotation() {
+    return this.#rotation;
+  }
+
+  getDimensions() {
+    return { width: this.#image.width, height: this.#image.height };
+  }
+}
+
+/** @abstract */
+class Drawable {
+  /**@type {{x: Number, y: Number}} */
+  #position;
+
+  constructor(position = { x: 0, y: 0 }) {
+    this.#position = position;
+  }
+
+  drawComplete(ctx, image, width, height, rotation) {
+    if (!image.complete) return;
+    if (rotation === 0)
+      ctx.drawImage(image, this.#position.x, this.#position.y);
+    else {
+      ctx.save();
+      const middleX = this.#position.x + width / 2;
+      const middleY = this.#position.y + height / 2;
+      ctx.translate(middleX, middleY);
+      ctx.rotate(rotation);
+      ctx.drawImage(image, -width / 2, -height / 2);
+      ctx.restore();
+    }
+  }
+
+  draw(ctx) {
+    throw new Error("draw(ctx) must be implemented");
+  }
+
+  setPosition(position) {
+    this.#position = position;
+  }
+
+  setPositionX(positionX) {
+    this.#position.x = positionX;
+  }
+
+  setPositionY(positionY) {
+    this.#position.y = positionY;
+  }
+
+  getPosition() {
+    return this.#position;
+  }
+}
+
+class SpriteObject extends Drawable {
+  #sprite;
+
+  /**
+   * @param {Sprite} sprite
+   * @param {{x: Number, y: Number}}
+   */
+  constructor(sprite, position) {
+    super(position);
+    this.#sprite = sprite;
+  }
+
+  /** @param {CanvasRenderingContext2D} ctx */
+  draw(ctx) {
+    const image = this.#sprite.getImage();
+    if (!image.complete) return;
+    const { width, height } = this.#sprite.getDimensions();
+    const rotation = this.#sprite.getRotation();
+
+    super.drawComplete(ctx, image, width, height, rotation);
+  }
+}
+
+class BirdObject extends Drawable {
+  #animationManager = new BirdAnimationManager();
+  #network = new Network();
+  #velocity = 0;
+  #isAlive = true;
+  #score = 0;
+
+  constructor() {
+    super({ x: 127, y: 244 });
+  }
+
+  draw(ctx) {
+    const { image, rotation } = this.#animationManager.getCurrentImage(
+      this.#velocity,
+      this.#isAlive,
+    );
+
+    if (!image.complete) return;
+    const width = image.width;
+    const height = image.height;
+    super.drawComplete(ctx, image, width, height, rotation);
+  }
+
+  getScore() {
+    return this.#score;
+  }
+
+  setScore(score) {
+    this.#score = score;
+  }
+
+  setVelocity(velocity) {
+    this.#velocity = velocity;
+  }
+
+  kill() {
+    this.#isAlive = false;
+  }
+
+  getVelocity() {
+    return this.#velocity;
+  }
+
+  isAlive() {
+    return this.#isAlive;
+  }
+
+  decide(info) {
+    return this.#network.decide(info);
+  }
+}
+
+class BirdAnimationManager {
+  #width = 34;
+  #height = 24;
+  #images;
+  constructor() {
+    this.#images = { up: new Image(), mid: new Image(), down: new Image() };
+    this.#images.up.src = "assets/Flappy Bird/yellowbird-downflap.png";
+    this.#images.mid.src = "assets/Flappy Bird/yellowbird-midflap.png";
+    this.#images.down.src = "assets/Flappy Bird/yellowbird-upflap.png";
+  }
+
+  /**@returns {{image: HTMLImageElement, rotation: Number}} */
+  getCurrentImage(velocity, isAlive) {
+    if (velocity > 0)
+      return {
+        image: this.#images.down,
+        rotation: (Math.min(isAlive ? 30 : 90, velocity / 5) * Math.PI) / 180,
+      };
+    else if (velocity < 0)
+      return {
+        image: this.#images.up,
+        rotation: (Math.max(-30, velocity / 5) * Math.PI) / 180,
+      };
+
+    return { image: this.#images.mid, rotation: 0 };
+  }
+}
+
+new Game(new Set(Array.from({ length: 1000 }, () => new BirdObject())));
