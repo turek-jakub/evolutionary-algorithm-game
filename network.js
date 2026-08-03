@@ -5,19 +5,17 @@ export class Network {
   /** @param {Network} parent*/
   constructor(parent = null) {
     if (parent === null) {
-      this.#layer = new Array(7).fill(new Array(7).fill(0));
-      this.#layer.forEach((vector) =>
-        vector.forEach(() => Math.random() * 150),
+      this.#layer = Array.from({ length: 6 }, () =>
+        Array.from({ length: 7 }, () => 2 * Math.random() - 1),
       );
 
-      this.#output = new Array(6).fill(0);
-      this.#output.forEach(() => Math.random() * 150);
+      this.#output = Array.from({ length: 7 }, () => 2 * Math.random() - 1);
       return;
     }
 
     const { layer, output } = parent.getStructure();
     this.#layer = structuredClone(layer);
-    this.#output = structuredClone(layer);
+    this.#output = structuredClone(output);
     this.#mutate();
   }
 
@@ -29,12 +27,13 @@ export class Network {
       );
     });
 
-    const outputValue =
-      this.#sigmoid(
-        this.#output.reduce((sum, x, idx) => sum + x * layerValue[idx]),
-      ) >= 0.5;
-    console.log(outputValue);
-    return outputValue;
+    layerValue.push(1);
+
+    const outputValue = this.#sigmoid(
+      this.#output.reduce((sum, x, idx) => sum + x * layerValue[idx]),
+    );
+
+    return outputValue >= 0.5;
   }
 
   /** @returns {{layer: [[Number]], output: [Number]}} */
@@ -43,13 +42,15 @@ export class Network {
   }
 
   #mutate() {
-    this.#layer.forEach(this.#mutateParameter);
-    this.#output.forEach(this.#mutateParameter);
+    this.#layer = this.#layer = this.#layer.map((row) =>
+      row.map((param) => this.#mutateParameter(param)),
+    );
+    this.#output = this.#output.map((x) => this.#mutateParameter(x));
   }
 
   #mutateParameter(x) {
-    if (Math.random() < 0.1) return Math.random() * 150;
-    return x + Math.random() * 10;
+    if (Math.random() < 0.1) return Math.random() * 2 - 1;
+    return x + (Math.random() - 0.5) * 0.1;
   }
 
   #sigmoid = (x) => 1 / (1 + Math.exp(-x));

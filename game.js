@@ -2,11 +2,6 @@ import { Network } from "./network.js";
 
 class Viewport {
   #canvas = document.getElementById("canvas");
-  #audioDeath = new Audio("assets/Sound Efects/die.ogg");
-  #audioHit = new Audio("assets/Sound Efects/hit.ogg");
-  #audioPoint = new Audio("assets/Sound Efects/point.ogg");
-  #audioWing = new Audio("assets/Sound Efects/wing.ogg");
-  #audioSwoosh = new Audio("assets/Sound Efects/swoosh.ogg");
   #ctx = canvas.getContext("2d");
 
   /** @param {Sprite[]} spritesArr */
@@ -91,7 +86,7 @@ class Game {
       pipe.setPositionX(pipe.getPositionX() - 100 * delta * this.#gameSpeed);
 
       if (pipe.getPositionX() < -52) {
-        this.addPipes(350 - 60 * Math.random(), this.#numOfPipes++);
+        this.addPipes(300 + 10 * Math.random() - 5, this.#numOfPipes++);
         this.#pipes.delete(pipe);
       } else this.#objects.push(pipe);
     }
