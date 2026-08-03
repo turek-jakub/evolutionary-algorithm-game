@@ -37,13 +37,13 @@ class Timer {
 }
 
 class Game {
-  #gameSpeed = 2;
+  #gameSpeed = 1.5;
   /** @type {Set<Pipes>} */
   #pipes = new Set();
   #previousUpdateTime = 0;
   #viewport = new Viewport();
   #numOfPipes = 0;
-  #decisionTimer = new Timer(5, () => this.decide());
+  #decisionTimer = new Timer(10, () => this.decide());
   /** @type {Set<BirdObject>} */
   #birds;
   #background = new SpriteObject(
@@ -183,21 +183,31 @@ class Game {
 
   decide() {
     for (const bird of this.#birds) {
+      if (!bird.isAlive()) continue;
+
       const info = [];
-      info.push(Math.min(bird.getVelocity() / 1000, 1));
-      info.push(Math.min(bird.getPosition().y / 512, 1));
+      info.push(bird.getVelocity() / 1000, 1);
+      info.push(bird.getPosition().y / 512, 1);
+
       const [...pipes] = this.#pipes;
-      pipes.sort((a, b) => a.getPositionX() - b.getPositionX());
-      const [closer, further] = pipes;
 
-      info.push(Math.min(closer.getPositionX() / 500, 1));
-      info.push(Math.min(closer.getSeparationTop() / 512, 1));
+      const upcomingPipes = pipes.filter(
+        (p) => p.getPositionX() + p.getWidth() > bird.getPosition().x,
+      );
+      upcomingPipes.sort((a, b) => a.getPositionX() - b.getPositionX());
 
-      info.push(Math.min(further.getPositionX() / 500, 1));
-      info.push(Math.min(further.getSeparationTop() / 512, 1));
+      const closer = upcomingPipes[0] || pipes[0];
+      const further = upcomingPipes[1] || closer;
+
+      info.push((closer.getPositionX() - bird.getPosition().x) / 500, 1);
+      info.push((closer.getSeparationTop() - bird.getPosition().y) / 512, 1);
+
+      info.push((further.getPositionX() - bird.getPosition().x) / 500, 1);
+      info.push((further.getSeparationTop() - bird.getPosition().y / 512, 1));
 
       info.push(1);
-      if (bird.isAlive() && bird.decide(info)) bird.setVelocity(-300);
+
+      if (bird.decide(info)) bird.setVelocity(-300);
     }
   }
 }
@@ -358,8 +368,18 @@ class BirdObject extends Drawable {
   #survivalTime = 0;
   #score = 0;
 
-  constructor() {
+  constructor(parentBird = null) {
     super({ x: 127, y: 244 });
+
+    if (parentBird) {
+      this.#network = new Network(parentBird.getNetwork());
+    } else {
+      this.#network = new Network();
+    }
+  }
+
+  getNetwork() {
+    return this.#network;
   }
 
   reset() {
