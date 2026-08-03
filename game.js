@@ -30,16 +30,20 @@ class Timer {
       this.#current = this.#initial;
     }
   }
+
+  reset() {
+    this.#current = this.#initial;
+  }
 }
 
 class Game {
-  #gameSpeed = 1;
+  #gameSpeed = 2;
   /** @type {Set<Pipes>} */
   #pipes = new Set();
   #previousUpdateTime = 0;
   #viewport = new Viewport();
   #numOfPipes = 0;
-  #decisionTimer = new Timer(10, () => this.decide());
+  #decisionTimer = new Timer(5, () => this.decide());
   /** @type {Set<BirdObject>} */
   #birds;
   #background = new SpriteObject(
@@ -54,6 +58,28 @@ class Game {
     y: 480,
   });
   #objects;
+  #deathCnt = 0;
+
+  restart() {
+    this.#pipes.clear();
+    this.#decisionTimer.reset();
+    this.#numOfPipes = 0;
+    this.#deathCnt = 0;
+
+    const birdArray = [...this.#birds];
+    birdArray.sort((a, b) => a.getSurvivalTime() - b.getSurvivalTime());
+    const best = birdArray.toSpliced(0, birdArray.length - 10);
+    this.#birds.clear();
+    for (const bird of best) {
+      bird.reset();
+      this.#birds.add(bird);
+      for (let i = 0; i < 99; i++) {
+        this.#birds.add(new BirdObject(bird));
+      }
+    }
+    console.log(this.#birds.size);
+    this.setup();
+  }
 
   /**@param {Set<BirdObject>} birds */
   constructor(birds) {
@@ -70,7 +96,10 @@ class Game {
   update(time) {
     const delta = Math.min((time - this.#previousUpdateTime) / 1000, 0.1);
     this.#objects = [this.#background];
-
+    if (this.#deathCnt >= 1000) {
+      this.restart();
+      return;
+    }
     for (const bird of this.#birds) {
       for (const pipe of this.#pipes) {
         if (this.isCollision(bird, pipe)) {
@@ -92,6 +121,7 @@ class Game {
     }
 
     for (const bird of this.#birds) {
+      if (!bird.isGrounded()) bird.addSurvivalTime();
       const position = bird.getPosition();
 
       if (position.y <= 458) {
@@ -101,6 +131,11 @@ class Game {
         );
       } else {
         bird.setPositionX(bird.getPosition().x - 100 * delta * this.#gameSpeed);
+        if (!bird.isGrounded()) {
+          bird.setGrounded(true);
+          this.#deathCnt++;
+          console.log(this.#deathCnt);
+        }
       }
       if (position.x > -32) this.#objects.push(bird);
     }
@@ -152,7 +187,7 @@ class Game {
       info.push(Math.min(bird.getVelocity() / 1000, 1));
       info.push(Math.min(bird.getPosition().y / 512, 1));
       const [...pipes] = this.#pipes;
-      pipes.sort((a, b) => a.getPositionX() < b.getPositionX());
+      pipes.sort((a, b) => a.getPositionX() - b.getPositionX());
       const [closer, further] = pipes;
 
       info.push(Math.min(closer.getPositionX() / 500, 1));
@@ -165,9 +200,6 @@ class Game {
       if (bird.isAlive() && bird.decide(info)) bird.setVelocity(-300);
     }
   }
-
-  /** @param {Creature[]} creatures */
-  play(creatures) {}
 }
 
 class Pipes {
@@ -322,10 +354,21 @@ class BirdObject extends Drawable {
   #network = new Network();
   #velocity = 0;
   #isAlive = true;
+  #isGrounded = false;
+  #survivalTime = 0;
   #score = 0;
 
   constructor() {
     super({ x: 127, y: 244 });
+  }
+
+  reset() {
+    this.setPosition({ x: 127, y: 244 });
+    this.#velocity = 0;
+    this.#isAlive = true;
+    this.#isGrounded = false;
+    this.#score = 0;
+    this.#survivalTime = 0;
   }
 
   draw(ctx) {
@@ -366,6 +409,22 @@ class BirdObject extends Drawable {
 
   decide(info) {
     return this.#network.decide(info);
+  }
+
+  isGrounded() {
+    return this.#isGrounded;
+  }
+
+  setGrounded(val) {
+    this.#isGrounded = val;
+  }
+
+  getSurvivalTime() {
+    return this.#survivalTime;
+  }
+
+  addSurvivalTime() {
+    this.#survivalTime++;
   }
 }
 
