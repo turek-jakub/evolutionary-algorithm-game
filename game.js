@@ -13,8 +13,8 @@ class Viewport {
     }
   }
 }
-
-class Timer {
+/*
+class InGameTimer {
   #initial;
   #current;
   #callback;
@@ -24,8 +24,9 @@ class Timer {
     this.#callback = callback;
   }
 
-  update() {
-    if (--this.#current <= 0) {
+  update(delta) {
+    this.#current -= delta;
+    if (this.#current <= 0) {
       this.#callback();
       this.#current = this.#initial;
     }
@@ -35,6 +36,7 @@ class Timer {
     this.#current = this.#initial;
   }
 }
+*/
 
 class Game {
   #gameSpeed = 1.5;
@@ -43,7 +45,6 @@ class Game {
   #previousUpdateTime = 0;
   #viewport = new Viewport();
   #numOfPipes = 0;
-  #decisionTimer = new Timer(10, () => this.decide());
   /** @type {Set<BirdObject>} */
   #birds;
   #background = new SpriteObject(
@@ -59,21 +60,21 @@ class Game {
   });
   #objects;
   #deathCnt = 0;
+  #timeBetweenDecision = 200;
 
   restart() {
     this.#pipes.clear();
-    this.#decisionTimer.reset();
     this.#numOfPipes = 0;
     this.#deathCnt = 0;
 
     const birdArray = [...this.#birds];
     birdArray.sort((a, b) => a.getSurvivalTime() - b.getSurvivalTime());
-    const best = birdArray.toSpliced(0, birdArray.length - 10);
+    const best = birdArray.toSpliced(0, birdArray.length - 5);
     this.#birds.clear();
     for (const bird of best) {
       bird.reset();
       this.#birds.add(bird);
-      for (let i = 0; i < 99; i++) {
+      for (let i = 0; i < 9; i++) {
         this.#birds.add(new BirdObject(bird));
       }
     }
@@ -90,12 +91,23 @@ class Game {
   setup() {
     this.addPipes(300, this.#numOfPipes++);
     this.addPipes(500, this.#numOfPipes++);
-    window.requestAnimationFrame((time) => this.update(time));
+    window.requestAnimationFrame((time) => this.viewUpdate(time));
   }
 
-  update(time) {
-    const delta = Math.min((time - this.#previousUpdateTime) / 1000, 0.1);
-    this.#objects = [this.#background];
+  viewUpdate(time) {
+    let delta = time - this.#previousUpdateTime;
+    const timeSegment = this.#timeBetweenDecision * this.#gameSpeed;
+    while (delta > timeSegment) {
+      delta -= timeSegment;
+      this.update(timeSegment);
+    }
+    this.#viewport.draw(this.#objects);
+
+    this.#previousUpdateTime = time - delta;
+    window.requestAnimationFrame((time) => this.viewUpdate(time));
+  }
+
+  update(delta) {
     if (this.#deathCnt >= 1000) {
       this.restart();
       return;
@@ -134,12 +146,11 @@ class Game {
         if (!bird.isGrounded()) {
           bird.setGrounded(true);
           this.#deathCnt++;
-          console.log(this.#deathCnt);
         }
       }
       if (position.x > -32) this.#objects.push(bird);
     }
-    this.#decisionTimer.update();
+    this.decide();
 
     this.#ground1.setPositionX(
       this.#ground1.getPosition().x - 100 * delta * this.#gameSpeed,
@@ -155,9 +166,8 @@ class Game {
       this.#ground2.setPositionX(this.#ground1.getPosition().x + 336);
 
     this.#previousUpdateTime = time;
-    window.requestAnimationFrame((time) => this.update(time));
+
     this.#objects.push(this.#ground1, this.#ground2);
-    this.#viewport.draw(this.#objects);
   }
 
   addPipes(distance, id) {
@@ -476,4 +486,4 @@ class BirdAnimationManager {
   }
 }
 
-new Game(new Set(Array.from({ length: 1000 }, () => new BirdObject())));
+new Game(new Set(Array.from({ length: 50 }, () => new BirdObject())));
