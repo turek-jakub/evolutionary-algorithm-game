@@ -13,33 +13,9 @@ class Viewport {
     }
   }
 }
-/*
-class InGameTimer {
-  #initial;
-  #current;
-  #callback;
-  constructor(initial, callback) {
-    this.#initial = initial;
-    this.#current = initial;
-    this.#callback = callback;
-  }
-
-  update(delta) {
-    this.#current -= delta;
-    if (this.#current <= 0) {
-      this.#callback();
-      this.#current = this.#initial;
-    }
-  }
-
-  reset() {
-    this.#current = this.#initial;
-  }
-}
-*/
 
 class Game {
-  #gameSpeed = 1.5;
+  #gameSpeed = 1;
   /** @type {Set<Pipes>} */
   #pipes = new Set();
   #previousUpdateTime = 0;
@@ -61,29 +37,28 @@ class Game {
   });
   #objects;
   #deathCnt = 0;
-  #timeBetweenDecision = 2;
+  #timeBetweenDecision = 10;
   #startTime = 0;
 
   restart() {
     this.#pipes.clear();
     this.#numOfPipes = 0;
     this.#deathCnt = 0;
-    this.#startTime = this.#previousUpdateTime;
+    this.#startTime = 0;
     this.#totalLogicUpdates = 0;
     this.#previousUpdateTime = 0;
 
     const birdArray = [...this.#birds];
     birdArray.sort((a, b) => a.getSurvivalTime() - b.getSurvivalTime());
-    const best = birdArray.toSpliced(0, birdArray.length - 5);
+    const best = birdArray.toSpliced(0, birdArray.length - 10);
     this.#birds.clear();
     for (const bird of best) {
       bird.reset();
       this.#birds.add(bird);
-      for (let i = 0; i < 9; i++) {
+      for (let i = 0; i < 99; i++) {
         this.#birds.add(new BirdObject(bird));
       }
     }
-    console.log(this.#birds.size);
     this.setup();
   }
 
@@ -100,19 +75,28 @@ class Game {
   }
 
   viewUpdate(time) {
+    if (this.#startTime === 0) {
+      this.#startTime = time;
+    }
+
     time = time - this.#startTime;
     const timeSegment = this.#timeBetweenDecision / this.#gameSpeed;
-    console.log("updated view");
     let currentSegment = this.#totalLogicUpdates * timeSegment;
+
+    if (time - currentSegment > 250) {
+      const timeToDrop = time - currentSegment - 250;
+      this.#startTime += timeToDrop;
+      time -= timeToDrop;
+    }
+
     while (currentSegment < time - timeSegment) {
       this.#totalLogicUpdates++;
       currentSegment = this.#totalLogicUpdates * timeSegment;
       this.update(currentSegment - this.#previousUpdateTime);
       this.#previousUpdateTime = currentSegment;
-      console.log("updated");
     }
     this.update(time - currentSegment, false);
-    if (this.#deathCnt >= 50) {
+    if (this.#deathCnt >= 1000) {
       this.restart();
       return;
     }
@@ -497,4 +481,4 @@ class BirdAnimationManager {
   }
 }
 
-new Game(new Set(Array.from({ length: 50 }, () => new BirdObject())));
+new Game(new Set(Array.from({ length: 1000 }, () => new BirdObject())));
