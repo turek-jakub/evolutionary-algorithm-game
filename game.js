@@ -43,6 +43,7 @@ class Game {
   /** @type {Set<Pipes>} */
   #pipes = new Set();
   #previousUpdateTime = 0;
+  #totalLogicUpdates = 0;
   #viewport = new Viewport();
   #numOfPipes = 0;
   /** @type {Set<BirdObject>} */
@@ -60,12 +61,16 @@ class Game {
   });
   #objects;
   #deathCnt = 0;
-  #timeBetweenDecision = 200;
+  #timeBetweenDecision = 2;
+  #startTime = 0;
 
   restart() {
     this.#pipes.clear();
     this.#numOfPipes = 0;
     this.#deathCnt = 0;
+    this.#startTime = this.#previousUpdateTime;
+    this.#totalLogicUpdates = 0;
+    this.#previousUpdateTime = 0;
 
     const birdArray = [...this.#birds];
     birdArray.sort((a, b) => a.getSurvivalTime() - b.getSurvivalTime());
@@ -95,23 +100,31 @@ class Game {
   }
 
   viewUpdate(time) {
-    let delta = time - this.#previousUpdateTime;
-    const timeSegment = this.#timeBetweenDecision * this.#gameSpeed;
-    while (delta > timeSegment) {
-      delta -= timeSegment;
-      this.update(timeSegment);
+    time = time - this.#startTime;
+    const timeSegment = this.#timeBetweenDecision / this.#gameSpeed;
+    console.log("updated view");
+    let currentSegment = this.#totalLogicUpdates * timeSegment;
+    while (currentSegment < time - timeSegment) {
+      this.#totalLogicUpdates++;
+      currentSegment = this.#totalLogicUpdates * timeSegment;
+      this.update(currentSegment - this.#previousUpdateTime);
+      this.#previousUpdateTime = currentSegment;
+      console.log("updated");
     }
-    this.#viewport.draw(this.#objects);
-
-    this.#previousUpdateTime = time - delta;
-    window.requestAnimationFrame((time) => this.viewUpdate(time));
-  }
-
-  update(delta) {
-    if (this.#deathCnt >= 1000) {
+    this.update(time - currentSegment, false);
+    if (this.#deathCnt >= 50) {
       this.restart();
       return;
     }
+    this.#viewport.draw(this.#objects);
+
+    this.#previousUpdateTime = time;
+    window.requestAnimationFrame((time) => this.viewUpdate(time));
+  }
+
+  update(time, think = true) {
+    const delta = time / 1000;
+    this.#objects = [this.#background];
     for (const bird of this.#birds) {
       for (const pipe of this.#pipes) {
         if (this.isCollision(bird, pipe)) {
@@ -150,7 +163,7 @@ class Game {
       }
       if (position.x > -32) this.#objects.push(bird);
     }
-    this.decide();
+    if (think) this.decide();
 
     this.#ground1.setPositionX(
       this.#ground1.getPosition().x - 100 * delta * this.#gameSpeed,
@@ -164,8 +177,6 @@ class Game {
 
     if (this.#ground2.getPosition().x < -336)
       this.#ground2.setPositionX(this.#ground1.getPosition().x + 336);
-
-    this.#previousUpdateTime = time;
 
     this.#objects.push(this.#ground1, this.#ground2);
   }
