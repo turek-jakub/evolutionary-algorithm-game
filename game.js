@@ -15,7 +15,7 @@ class Viewport {
 }
 
 class Game {
-  #gameSpeed = 1;
+  #gameSpeed = 1.5;
   /** @type {Set<Pipes>} */
   #pipes = new Set();
   #previousUpdateTime = 0;
@@ -37,7 +37,7 @@ class Game {
   });
   #objects;
   #deathCnt = 0;
-  #timeBetweenDecision = 10;
+  #timeBetweenDecision = 20;
   #startTime = 0;
 
   restart() {
@@ -83,8 +83,8 @@ class Game {
     const timeSegment = this.#timeBetweenDecision / this.#gameSpeed;
     let currentSegment = this.#totalLogicUpdates * timeSegment;
 
-    if (time - currentSegment > 250) {
-      const timeToDrop = time - currentSegment - 250;
+    if (time - currentSegment > 16) {
+      const timeToDrop = time - currentSegment - 16;
       this.#startTime += timeToDrop;
       time -= timeToDrop;
     }
@@ -110,14 +110,15 @@ class Game {
     const delta = time / 1000;
     this.#objects = [this.#background];
     for (const bird of this.#birds) {
-      for (const pipe of this.#pipes) {
-        if (this.isCollision(bird, pipe)) {
-          bird.kill();
-        } else if (bird.getPosition() > pipe.getPositionX()) {
-          const pipeId = pipe.getId();
-          if (pipeId > bird.getScore()) bird.setScore(pipeId);
+      if (bird.isAlive() && !bird.isGrounded())
+        for (const pipe of this.#pipes) {
+          if (this.isCollision(bird, pipe)) {
+            bird.kill();
+          } else if (bird.getPosition() > pipe.getPositionX()) {
+            const pipeId = pipe.getId();
+            if (pipeId > bird.getScore()) bird.setScore(pipeId);
+          }
         }
-      }
     }
 
     for (const pipe of this.#pipes) {
@@ -188,7 +189,7 @@ class Game {
 
   decide() {
     for (const bird of this.#birds) {
-      if (!bird.isAlive()) continue;
+      if (!bird.isAlive() || bird.isGrounded()) continue;
 
       const info = [];
       info.push(bird.getVelocity() / 1000, 1);
