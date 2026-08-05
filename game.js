@@ -30,7 +30,8 @@ class Game {
   #gameSpeed = 1;
   /** @type {Set<Pipes>} */
   #pipes = new Set();
-  #previousUpdateTime = 0;
+  #previousRealTime = 0;
+  #previousTime = 0;
   #totalLogicUpdates = 0;
   #viewport = new Viewport();
   #numOfPipes = 0;
@@ -58,7 +59,8 @@ class Game {
     this.#deathCnt = 0;
     this.#startTime = 0;
     this.#totalLogicUpdates = 0;
-    this.#previousUpdateTime = 0;
+    this.#previousRealTime = 0;
+    this.#previousTime = 0;
 
     const birdArray = [...this.#birds];
     birdArray.sort((a, b) => a.getSurvivalTime() - b.getSurvivalTime());
@@ -91,34 +93,36 @@ class Game {
     if (this.#startTime === 0) {
       this.#startTime = time;
     }
+    time -= this.#startTime;
 
-    time = time - this.#startTime;
+    const realDelta = Math.min(time - this.#previousRealTime, 250);
+    const delta = realDelta * this.#gameSpeed;
+
+    let currentTime = this.#previousTime + delta;
     const timeSegment = this.#timeBetweenDecision;
     let currentSegment = this.#totalLogicUpdates * timeSegment;
 
-    if (time - currentSegment > 16) {
-      const timeToDrop = time - currentSegment - 16;
-      this.#startTime += timeToDrop;
-      time -= timeToDrop;
-    }
-
-    while (currentSegment < time - timeSegment) {
+    while (currentSegment < currentTime - timeSegment) {
       this.#totalLogicUpdates++;
       currentSegment = this.#totalLogicUpdates * timeSegment;
-      this.update(currentSegment - this.#previousUpdateTime);
-      this.#previousUpdateTime = currentSegment;
+      this.update(currentSegment - this.#previousTime);
+      this.#previousTime = currentSegment;
     }
-    this.update(time - currentSegment, false);
+
+    this.update(currentTime - currentSegment, false);
     if (this.#deathCnt >= 1000) {
       this.restart();
       return;
     }
     this.#viewport.draw(this.#objects);
 
-    this.#previousUpdateTime = time;
+    this.#previousRealTime = time;
+    this.#previousTime = currentTime;
+
     if (this.#gameSpeed !== gameSpeed) {
       this.#gameSpeed = gameSpeed;
     }
+
     window.requestAnimationFrame((time) => this.viewUpdate(time));
   }
 
@@ -144,7 +148,7 @@ class Game {
     }
 
     for (const pipe of this.#pipes) {
-      pipe.setPositionX(pipe.getPositionX() - 100 * delta * this.#gameSpeed);
+      pipe.setPositionX(pipe.getPositionX() - 100 * delta);
 
       if (pipe.getPositionX() < -52) {
         const otherPipe = [...this.#pipes].filter((x) => x !== pipe)[0];
@@ -162,12 +166,10 @@ class Game {
       const position = bird.getPosition();
 
       if (position.y <= 458) {
-        bird.setVelocity(bird.getVelocity() + 800 * delta * this.#gameSpeed);
-        bird.setPositionY(
-          position.y + bird.getVelocity() * delta * this.#gameSpeed,
-        );
+        bird.setVelocity(bird.getVelocity() + 800 * delta);
+        bird.setPositionY(position.y + bird.getVelocity() * delta);
       } else {
-        bird.setPositionX(bird.getPosition().x - 100 * delta * this.#gameSpeed);
+        bird.setPositionX(bird.getPosition().x - 100 * delta);
         if (!bird.isGrounded()) {
           bird.setGrounded(true);
           this.#deathCnt++;
@@ -177,18 +179,13 @@ class Game {
     }
     if (think) this.decide();
 
-    this.#ground1.setPositionX(
-      this.#ground1.getPosition().x - 100 * delta * this.#gameSpeed,
-    );
-    this.#ground2.setPositionX(
-      this.#ground2.getPosition().x - 100 * delta * this.#gameSpeed,
-    );
+    this.#ground1.setPositionX(this.#ground1.getPosition().x - 100 * delta);
+    this.#ground2.setPositionX(this.#ground2.getPosition().x - 100 * delta);
 
-    if (this.#ground1.getPosition().x < -336)
-      this.#ground1.setPositionX(this.#ground2.getPosition().x + 336);
-
-    if (this.#ground2.getPosition().x < -336)
-      this.#ground2.setPositionX(this.#ground1.getPosition().x + 336);
+    if (this.#ground1.getPosition().x < -336) {
+      this.#ground1.setPositionX(0);
+      this.#ground2.setPositionX(336);
+    }
 
     this.#objects.push(this.#ground1, this.#ground2);
   }
