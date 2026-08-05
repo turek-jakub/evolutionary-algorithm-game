@@ -1,5 +1,15 @@
 import { Network } from "./network.js";
 
+let gameSpeed = 1;
+const gameSpeedValue = document.getElementById("game-speed-value");
+document.getElementById("game-speed").addEventListener("input", (event) => {
+  gameSpeedValue.textContent = event.target.value + "x";
+  gameSpeed = event.target.value;
+});
+
+const generationNumber = document.getElementById("generation-number");
+const highscoreNumber = document.getElementById("highscore-number");
+
 class Viewport {
   #canvas = document.getElementById("canvas");
   #ctx = canvas.getContext("2d");
@@ -15,7 +25,9 @@ class Viewport {
 }
 
 class Game {
-  #gameSpeed = 1.5;
+  #highscore = 0;
+  #generationNumber = 1;
+  #gameSpeed = 1;
   /** @type {Set<Pipes>} */
   #pipes = new Set();
   #previousUpdateTime = 0;
@@ -37,7 +49,7 @@ class Game {
   });
   #objects;
   #deathCnt = 0;
-  #timeBetweenDecision = 20;
+  #timeBetweenDecision = 10;
   #startTime = 0;
 
   restart() {
@@ -60,6 +72,7 @@ class Game {
       }
     }
     this.setup();
+    generationNumber.textContent = "#" + ++this.#generationNumber;
   }
 
   /**@param {Set<BirdObject>} birds */
@@ -80,7 +93,7 @@ class Game {
     }
 
     time = time - this.#startTime;
-    const timeSegment = this.#timeBetweenDecision / this.#gameSpeed;
+    const timeSegment = this.#timeBetweenDecision;
     let currentSegment = this.#totalLogicUpdates * timeSegment;
 
     if (time - currentSegment > 16) {
@@ -103,6 +116,9 @@ class Game {
     this.#viewport.draw(this.#objects);
 
     this.#previousUpdateTime = time;
+    if (this.#gameSpeed !== gameSpeed) {
+      this.#gameSpeed = gameSpeed;
+    }
     window.requestAnimationFrame((time) => this.viewUpdate(time));
   }
 
@@ -114,9 +130,15 @@ class Game {
         for (const pipe of this.#pipes) {
           if (this.isCollision(bird, pipe)) {
             bird.kill();
-          } else if (bird.getPosition() > pipe.getPositionX()) {
+          } else if (bird.getPosition().x > pipe.getPositionX()) {
             const pipeId = pipe.getId();
-            if (pipeId > bird.getScore()) bird.setScore(pipeId);
+            if (pipeId > bird.getScore()) {
+              bird.setScore(pipeId);
+              if (pipeId > this.#highscore) {
+                this.#highscore = pipeId;
+                highscoreNumber.textContent = this.#highscore;
+              }
+            }
           }
         }
     }
@@ -125,7 +147,12 @@ class Game {
       pipe.setPositionX(pipe.getPositionX() - 100 * delta * this.#gameSpeed);
 
       if (pipe.getPositionX() < -52) {
-        this.addPipes(300 + 10 * Math.random() - 5, this.#numOfPipes++);
+        const otherPipe = [...this.#pipes].filter((x) => x !== pipe)[0];
+
+        this.addPipes(
+          Math.max(otherPipe.getPositionX() + 200, 300 + 10 * Math.random()),
+          this.#numOfPipes++,
+        );
         this.#pipes.delete(pipe);
       } else this.#objects.push(pipe);
     }

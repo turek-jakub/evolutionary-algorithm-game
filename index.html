@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Game</title>
     <style>
+      * {
+        box-sizing: border-box;
+      }
       body {
         height: 100vh;
         width: 100vw;
@@ -14,17 +17,93 @@
         background-color: rgb(125, 145, 145);
       }
       canvas {
-        border: 3px solid black;
-        border-radius: 1px;
-        width: 42.1vh;
-        height: 70vh;
+        height: 100%;
+        border: 1px solid black;
+        border-radius: 0px;
+      }
+      #settings-container {
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        background-color: rgb(163, 175, 175);
+        padding: 0px 10px 10px 10px;
+        border: 1px solid black;
+        height: fit-content;
+      }
+      #main-container {
+        height: 80%;
+        width: 70%;
+        display: flex;
+        gap: 10px;
+        max-width: 1000px;
+      }
+      #settings-container > h2 {
+        margin: 5px;
+      }
+      #game-speed-container {
+        display: flex;
+        flex-direction: column;
+        gap: 0px;
+        padding: 0px;
+      }
+      #game-speed-container > * {
+        padding: 0px;
+        margin: 0px;
+      }
+      .container {
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        background-color: rgb(163, 175, 175);
+        padding: 0px 10px 10px 10px;
+        border: 1px solid black;
+      }
+      #right-container {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
       }
     </style>
   </head>
   <body>
-    <div style="position: relative">
-      <canvas id="canvas" width="288" height="512"></canvas>
+    <div id="main-container">
+      <div>
+        <canvas id="canvas" width="288" height="512"></canvas>
+      </div>
+      <div id="right-container">
+        <div class="container">
+          <div style="display: flex">
+            <h2>GENERATION</h2>
+            <h2 style="margin-left: auto" id="generation-number">#1</h2>
+          </div>
+          <div style="display: flex; border-top: 1px solid black">
+            <h3>MAX SCORE</h3>
+            <h3 style="margin-left: auto" id="highscore-number">0</h3>
+          </div>
+        </div>
+        <div id="settings-container" clas="container">
+          <h2>SETTINGS</h2>
+          <div id="game-speed-container">
+            <span style="display: flex">
+              <p>Game speed:</p>
+              <p style="margin-left: auto" id="game-speed-value">1x</p>
+            </span>
+
+            <input
+              type="range"
+              min="1"
+              max="100"
+              value="1"
+              step="0.5"
+              class="slider"
+              id="game-speed"
+            />
+          </div>
+        </div>
+      </div>
     </div>
   </body>
   <script type="module" src="game.js"></script>
+  <script src="./listeners.js"></script>
 </html>

@@ -49,9 +49,9 @@ export class Network {
   }
 
   #mutateParameter(x) {
-    if (Math.random() < 0.75) return x;
+    if (Math.random() < 0.9) return x;
     if (Math.random() < 0.05) return Math.random() * 2 - 1;
-    return x + (Math.random() - 0.5) * 0.5;
+    return x + (Math.random() - 0.5) * 0.25;
   }
 
   #sigmoid = (x) => 1 / (1 + Math.exp(-x));
