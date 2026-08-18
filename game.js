@@ -149,12 +149,33 @@ class Game {
 
     for (const pipe of this.#pipes) {
       pipe.setPositionX(pipe.getPositionX() - 100 * delta);
+      const pipeDirection = pipe.getDirection();
+      const pipeSpeed = pipe.getSpeed();
+
+      if (pipeDirection === 1) {
+        pipe.addSeparationTop(pipeSpeed * delta);
+        if (pipe.getSeparationTop() > 312) {
+          pipe.setMoveDirection(-1);
+          pipe.setSpeed(Math.random() * 40);
+          pipe.setSeparationTop(312);
+        }
+      } else {
+        pipe.addSeparationTop(-pipeSpeed * delta);
+        if (pipe.getSeparationTop() < 100) {
+          pipe.setMoveDirection(1);
+          pipe.setSpeed(Math.random() * 40);
+          pipe.setSeparationTop(100);
+        }
+      }
+
+      pipe.setTopPipeY(pipe.getSeparationTop() + pipe.pipeSeparation);
+      pipe.setBottomPipeY(pipe.getSeparationTop() - pipe.getHeight());
 
       if (pipe.getPositionX() < -52) {
         const otherPipe = [...this.#pipes].filter((x) => x !== pipe)[0];
 
         this.addPipes(
-          Math.max(otherPipe.getPositionX() + 200, 300 + 10 * Math.random()),
+          Math.max(otherPipe.getPositionX() + 170, 300 + 10 * Math.random()),
           this.#numOfPipes++,
         );
         this.#pipes.delete(pipe);
@@ -234,6 +255,9 @@ class Game {
 
       info.push((further.getPositionX() - bird.getPosition().x) / 500, 1);
       info.push((further.getSeparationTop() - bird.getPosition().y / 512, 1));
+      info.push(
+        ((closer.getDirection() === 1 ? 1 : 0) * closer.getSpeed()) / 30,
+      );
 
       info.push(1);
 
@@ -243,9 +267,11 @@ class Game {
 }
 
 class Pipes {
-  pipeSeparation = 120;
+  pipeSeparation = 110;
 
   #separationTop = Math.floor(Math.random() * 212) + 100;
+  #moveSpeed = 30;
+  #moveDirection = Math.random() < 0.5 ? -1 : 1;
   #height = 320;
   #width = 52;
   #topPipe;
@@ -296,6 +322,38 @@ class Pipes {
 
   getSeparationTop() {
     return this.#separationTop;
+  }
+
+  getDirection() {
+    return this.#moveDirection;
+  }
+
+  getSpeed() {
+    return this.#moveSpeed;
+  }
+
+  setSpeed(value) {
+    this.#moveSpeed = value;
+  }
+
+  addSeparationTop(value) {
+    this.#separationTop += value;
+  }
+
+  setMoveDirection(value) {
+    this.#moveDirection = value;
+  }
+
+  setSeparationTop(value) {
+    this.#separationTop = value;
+  }
+
+  setTopPipeY(value) {
+    this.#topPipe.setPositionY(value);
+  }
+
+  setBottomPipeY(value) {
+    this.#bottomPipe.setPositionY(value);
   }
 }
 

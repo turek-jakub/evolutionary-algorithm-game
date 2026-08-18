@@ -6,7 +6,7 @@ export class Network {
   constructor(parent = null) {
     if (parent === null) {
       this.#layer = Array.from({ length: 6 }, () =>
-        Array.from({ length: 7 }, () => 2 * Math.random() - 1),
+        Array.from({ length: 8 }, () => 2 * Math.random() - 1),
       );
 
       this.#output = Array.from({ length: 7 }, () => 2 * Math.random() - 1);
