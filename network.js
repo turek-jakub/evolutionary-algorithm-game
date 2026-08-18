@@ -1,3 +1,12 @@
+let mutationsRate = 1;
+const mutationValue = document.getElementById("mutation-value");
+const mutationMap = ["Lowest", "Moderate", "High", "Highest"];
+const mutationValueMap = [0.842, 1, 2, 5];
+document.getElementById("mutation").addEventListener("input", (event) => {
+  mutationsRate = event.target.value;
+  mutationValue.textContent = mutationMap[mutationsRate];
+});
+
 export class Network {
   #layer;
   #output;
@@ -49,9 +58,10 @@ export class Network {
   }
 
   #mutateParameter(x) {
-    if (Math.random() < 0.9) return x;
-    if (Math.random() < 0.05) return Math.random() * 2 - 1;
-    return x + (Math.random() - 0.5) * 0.25;
+    if (Math.random() < 0.8 / mutationValueMap[mutationsRate]) return x;
+    if (Math.random() < 0.05 * mutationValueMap[mutationsRate])
+      return Math.random() * 2 - 1;
+    return x + (Math.random() - 0.5) * 0.25 * mutationValueMap[mutationsRate];
   }
 
   #sigmoid = (x) => 1 / (1 + Math.exp(-x));

@@ -40,7 +40,8 @@
       #settings-container > h2 {
         margin: 5px;
       }
-      #game-speed-container {
+      #game-speed-container,
+      #mutations-container {
         display: flex;
         flex-direction: column;
         gap: 0px;
@@ -66,6 +67,9 @@
         flex-direction: column;
         gap: 20px;
       }
+      input {
+        accent-color: gray;
+      }
     </style>
   </head>
   <body>
@@ -82,6 +86,10 @@
           <div style="display: flex; border-top: 1px solid black">
             <h3>MAX SCORE</h3>
             <h3 style="margin-left: auto" id="highscore-number">0</h3>
+          </div>
+          <div style="display: flex; border-top: 1px solid black">
+            <h3>CURRENT SCORE</h3>
+            <h3 style="margin-left: auto" id="score-number">0</h3>
           </div>
         </div>
         <div id="settings-container" clas="container">
@@ -107,17 +115,32 @@
           <div id="mutations-container">
             <span style="display: flex">
               <p>Generation size:</p>
-              <p style="margin-left: auto" id="generation-size-value">1x</p>
+              <p style="margin-left: auto" id="generation-size-value">1000</p>
             </span>
 
             <input
               type="range"
-              min="1"
-              max="50"
+              min="100"
+              max="5000"
+              value="1000"
+              step="100"
+              class="slider"
+              id="generation-size"
+            />
+
+            <span style="display: flex">
+              <p>Mutation rate:</p>
+              <p style="margin-left: auto" id="mutation-value">Moderate</p>
+            </span>
+
+            <input
+              type="range"
+              min="0"
+              max="3"
               value="1"
               step="1"
               class="slider"
-              id="game-speed"
+              id="mutation"
             />
           </div>
         </div>

@@ -4,11 +4,21 @@ let gameSpeed = 1;
 const gameSpeedValue = document.getElementById("game-speed-value");
 document.getElementById("game-speed").addEventListener("input", (event) => {
   gameSpeedValue.textContent = event.target.value + "x";
-  gameSpeed = event.target.value;
+  gameSpeed = parseInt(event.target.value);
 });
+
+let generationSize = 1000;
+const generationSizeValue = document.getElementById("generation-size-value");
+document
+  .getElementById("generation-size")
+  .addEventListener("input", (event) => {
+    generationSize = parseInt(event.target.value);
+    generationSizeValue.textContent = generationSize;
+  });
 
 const generationNumber = document.getElementById("generation-number");
 const highscoreNumber = document.getElementById("highscore-number");
+const scoreNumber = document.getElementById("score-number");
 
 class Viewport {
   #canvas = document.getElementById("canvas");
@@ -26,6 +36,7 @@ class Viewport {
 
 class Game {
   #highscore = 0;
+  #score = 0;
   #generationNumber = 1;
   #gameSpeed = 1;
   /** @type {Set<Pipes>} */
@@ -61,18 +72,25 @@ class Game {
     this.#totalLogicUpdates = 0;
     this.#previousRealTime = 0;
     this.#previousTime = 0;
+    this.#score = 0;
+    scoreNumber.textContent = 0;
 
     const birdArray = [...this.#birds];
     birdArray.sort((a, b) => a.getSurvivalTime() - b.getSurvivalTime());
-    const best = birdArray.toSpliced(0, birdArray.length - 10);
+    const noOfBest = Math.max(Math.ceil(birdArray.length * 0.01), 1);
+    const offspringPerBird = Math.floor(generationSize / noOfBest) - 1;
+    const best = birdArray.toSpliced(0, birdArray.length - noOfBest);
     this.#birds.clear();
     for (const bird of best) {
       bird.reset();
       this.#birds.add(bird);
-      for (let i = 0; i < 99; i++) {
+      for (let i = 0; i < offspringPerBird; i++) {
         this.#birds.add(new BirdObject(bird));
       }
     }
+    while (this.#birds.size < generationSize)
+      this.#birds.add(new BirdObject(best[-1]));
+
     this.setup();
     generationNumber.textContent = "#" + ++this.#generationNumber;
   }
@@ -84,8 +102,8 @@ class Game {
   }
 
   setup() {
-    this.addPipes(300, this.#numOfPipes++);
-    this.addPipes(500, this.#numOfPipes++);
+    this.addPipes(300, ++this.#numOfPipes);
+    this.addPipes(500, ++this.#numOfPipes);
     window.requestAnimationFrame((time) => this.viewUpdate(time));
   }
 
@@ -110,7 +128,7 @@ class Game {
     }
 
     this.update(currentTime - currentSegment, false);
-    if (this.#deathCnt >= 1000) {
+    if (this.#deathCnt >= this.#birds.size) {
       this.restart();
       return;
     }
@@ -138,6 +156,10 @@ class Game {
             const pipeId = pipe.getId();
             if (pipeId > bird.getScore()) {
               bird.setScore(pipeId);
+              if (pipeId > this.#score) {
+                this.#score = pipeId;
+                scoreNumber.textContent = pipeId;
+              }
               if (pipeId > this.#highscore) {
                 this.#highscore = pipeId;
                 highscoreNumber.textContent = this.#highscore;
@@ -175,8 +197,8 @@ class Game {
         const otherPipe = [...this.#pipes].filter((x) => x !== pipe)[0];
 
         this.addPipes(
-          Math.max(otherPipe.getPositionX() + 170, 300 + 10 * Math.random()),
-          this.#numOfPipes++,
+          Math.max(otherPipe.getPositionX() + 180, 300 + 10 * Math.random()),
+          ++this.#numOfPipes,
         );
         this.#pipes.delete(pipe);
       } else this.#objects.push(pipe);
