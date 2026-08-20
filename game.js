@@ -19,6 +19,7 @@ document
 const generationNumber = document.getElementById("generation-number");
 const highscoreNumber = document.getElementById("highscore-number");
 const scoreNumber = document.getElementById("score-number");
+const speedErr = document.getElementById("speed-err");
 
 class Viewport {
   #canvas = document.getElementById("canvas");
@@ -112,6 +113,7 @@ class Game {
     window.requestAnimationFrame((time) => this.viewUpdate(time));
   }
 
+  #lowPerformanceCounter = 0;
   viewUpdate(time) {
     if (this.#destroyed) return;
 
@@ -120,7 +122,21 @@ class Game {
     }
     time -= this.#startTime;
 
-    const realDelta = Math.min(time - this.#previousRealTime, 250);
+    let realDelta = time - this.#previousRealTime;
+    if (realDelta > 250) {
+      if (this.#lowPerformanceCounter > 5) {
+        speedErr.classList.remove("hidden");
+      } else {
+        this.#lowPerformanceCounter++;
+      }
+      realDelta = 250;
+    } else {
+      if (this.#lowPerformanceCounter > 0) {
+        this.#lowPerformanceCounter--;
+      } else {
+        speedErr.classList.add("hidden");
+      }
+    }
     const delta = realDelta * this.#gameSpeed;
 
     let currentTime = this.#previousTime + delta;
