@@ -63,6 +63,11 @@ class Game {
   #deathCnt = 0;
   #timeBetweenDecision = 10;
   #startTime = 0;
+  #destroyed = false;
+
+  destroy() {
+    this.#destroyed = true;
+  }
 
   restart() {
     this.#pipes.clear();
@@ -108,6 +113,8 @@ class Game {
   }
 
   viewUpdate(time) {
+    if (this.#destroyed) return;
+
     if (this.#startTime === 0) {
       this.#startTime = time;
     }
@@ -145,6 +152,7 @@ class Game {
   }
 
   update(time, think = true) {
+    if (this.#destroyed) return;
     const delta = time / 1000;
     this.#objects = [this.#background];
     for (const bird of this.#birds) {
@@ -586,4 +594,13 @@ class BirdAnimationManager {
   }
 }
 
-new Game(new Set(Array.from({ length: 1000 }, () => new BirdObject())));
+let game = new Game(
+  new Set(Array.from({ length: 1000 }, () => new BirdObject())),
+);
+
+document.getElementById("reset-btn").addEventListener("click", () => {
+  game.destroy();
+  game = new Game(
+    new Set(Array.from({ length: generationSize }, () => new BirdObject())),
+  );
+});
