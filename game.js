@@ -197,7 +197,7 @@ class Game {
         const otherPipe = [...this.#pipes].filter((x) => x !== pipe)[0];
 
         this.addPipes(
-          Math.max(otherPipe.getPositionX() + 180, 300 + 10 * Math.random()),
+          Math.max(otherPipe.getPositionX() + 190, 300 + 10 * Math.random()),
           ++this.#numOfPipes,
         );
         this.#pipes.delete(pipe);
